@@ -120,6 +120,7 @@ contract Seglos{
 
     /*
      * Constant functions
+     * Provides information for the user interface
     */
 
     function getUserList() constant returns (uint[]) {
