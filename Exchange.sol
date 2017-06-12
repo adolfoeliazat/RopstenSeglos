@@ -12,7 +12,7 @@ contract Seglos{
     CoinbasePriceTicker public PriceContract;
     bool public ExchangeOpen;
     uint public Fee;
-    uint public liquidityPool; // the ammount availble to be lend out
+    uint public liquidityPool; // the ammount of ETH availble to be lent out
     uint public tradeId;
     uint public tradeMinimum;
     uint public tradeMaximum;
@@ -94,7 +94,7 @@ contract Seglos{
       if (getCurrentPrice() <= getPrice(trade.time)*(1/trade.lev))
         marginCall = true;
 
-      require ((msg.sender == trade.user || msg.sender == Admin) || marginCall)
+      require (msg.sender == trade.user || msg.sender == Admin || marginCall)
 
       if (marginCall){
 
@@ -103,6 +103,7 @@ contract Seglos{
       }else {
 
         // Formula that calculates the profit and loss of the user and fund
+        
         uint fundEth =  trade.eth * getPrice(trade.time) * (trade.lev - 1) / (trade.lev * getCurrentPrice());
 
         liquidityPool += fundEth;
