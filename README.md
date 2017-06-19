@@ -2,7 +2,7 @@
 Smart Contracts for the Seglos DAPP located at: [www.seglos.com/app](http://www.seglos.com/app) 
 
 ### Exchange.sol
-Responsbile for creating trades and providing information to the user interface. Two most important functions are `createTrade(uint _leverage)` and `exitTrade(uint _tradeId)`  
+Responsbile for creating loans and providing information to the user interface. Two most important functions are `borrowLoan(uint _leverage)` and `paybackLoan(uint _loanId)`  
 
 Deployed at: [0x8f03ad84b390f1e6d2cd11960afda6bb5c1e696b](https://ropsten.etherscan.io/address/0x8f03ad84b390f1e6d2cd11960afda6bb5c1e696b#code)
 
