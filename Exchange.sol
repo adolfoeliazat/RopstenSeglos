@@ -13,23 +13,23 @@ contract Seglos{
     bool public ExchangeOpen;
     uint public Fee;
     uint public liquidityPool; // the ammount of ETH availble to be lent out
-    uint public tradeId;
-    uint public tradeMinimum;
-    uint public tradeMaximum;
+    uint public loanId;
+    uint public loanMinimum;
+    uint public loanMaximum;
 
-    struct Trade { // trade instance assigned to a user
+    struct Loan { // loan instance assigned to a user
       address user;
-      uint lev;  // leverage on the trade
-      uint eth;  // size of the trade in wei
-      uint time; // time at which the trade was created
-      uint exit; // time at which the trade was exited
+      uint lev;  // leverage on the loan
+      uint eth;  // size of the loan in wei
+      uint time; // time at which the loan was created
+      uint exit; // time at which the loan was exited
     }
 
-    mapping ( address => uint[] ) private listOfTrades; // to find the list of a users trades
-    mapping ( uint => Trade ) private trades; // tradeId => Trade instance
+    mapping ( address => uint[] ) private listOfLoans; // to find the list of a users loans
+    mapping ( uint => loan ) private Loans; // loanId => loan instance
 
-    event createTradeEvent(address user, uint tradeId);
-    event exitTradeEvent(address user, uint tradeId);
+    event borrowLoanEvent(address user, uint loanId);
+    event paybackLoanEvent(address user, uint loanId);
 
     modifier AdminOnly(){
       require (msg.sender == Admin);
@@ -39,17 +39,17 @@ contract Seglos{
     function Seglos() {
       Admin = msg.sender;
       liquidityPool = 0;
-      tradeId = 0;
+      loanId = 0;
       ExchangeOpen = true;
-      tradeMinimum = 100 finney;
-      tradeMaximum = 10 ether;
+      loanMinimum = 100 finney;
+      loanMaximum = 10 ether;
       PriceContract = CoinbasePriceTicker("0x1A3f9356356b9423BFb465316e889EBBEBEde1ED");
     }
 
     /*
-     *  Creates the trade by subtracting a fee and recording trade data
+     *  Creates the loan by subtracting a fee and recording loan data
     */
-    function createTrade(uint _leverage) payable {
+    function borrowLoan(uint _leverage) payable {
 
       uint fee = msg.value * Fee / 100000;
       uint eth = msg.value - fee;
@@ -58,7 +58,7 @@ contract Seglos{
 
       require (_leverage == 2 || _leverage == 3 || _leverage == 4)
 
-      require (eth >= tradeMinimum || eth <= tradeMaximum)
+      require (eth >= loanMinimum || eth <= loanMaximum)
 
       require (liquidityPool >= eth * (_leverage - 1))
 
@@ -67,56 +67,56 @@ contract Seglos{
 
       liquidityPool += fee;
 
-      tradeId++;
+      loanId++;
 
-      trades[tradeId] = Trade(msg.sender, _leverage, eth*_leverage, getCurrentTimestamp(), 0);
+      Loans[loanId] = Loan(msg.sender, _leverage, eth*_leverage, getCurrentTimestamp(), 0);
 
-      listOfTrades[msg.sender].push(tradeId);
+      listOfLoans[msg.sender].push(loanId);
 
-      createTradeEvent(msg.sender, tradeId);
+      createloanEvent(msg.sender, loanId);
     }
 
     /*
-     * Distributes profits and loses from the trade to the user and fund
+     * Distributes profits and loses from the loan to the user and fund
     */
-    function exitTrade(uint _tradeId) {
+    function paybackLoan(uint _loanId) {
 
-      Trade trade = trades[_tradeId];
+      Loan loan = Loans[_loanId];
       bool marginCall = false;
 
       // prevent high frequency trading
-      require (now > trade.time + 15 minutes)
+      require (now > loan.time + 15 minutes)
 
-      require (trade.exit == 0)
+      require (loan.exit == 0)
 
-      trade.exit = getCurrentTimestamp();
+      loan.exit = getCurrentTimestamp();
 
-      if (getCurrentPrice() <= getPrice(trade.time)*(1/trade.lev))
+      if (getCurrentPrice() <= getPrice(loan.time)*(1/loan.lev))
         marginCall = true;
 
-      require (msg.sender == trade.user || msg.sender == Admin || marginCall)
+      require (msg.sender == loan.user || msg.sender == Admin || marginCall)
 
       if (marginCall){
 
-        liquidityPool = liquidityPool + trade.eth;
+        liquidityPool = liquidityPool + loan.eth;
 
       }else {
 
         // Formula that calculates the profit and loss of the user and fund
         
-        uint fundEth =  trade.eth * getPrice(trade.time) * (trade.lev - 1) / (trade.lev * getCurrentPrice());
+        uint fundEth =  loan.eth * getPrice(loan.time) * (loan.lev - 1) / (loan.lev * getCurrentPrice());
 
         liquidityPool += fundEth;
 
-        uint userEth = trade.eth - fundEth;
+        uint userEth = loan.eth - fundEth;
 
-        bool sent = trade.user.send(userEth);
+        bool sent = loan.user.send(userEth);
 
         require (sent);
 
       }
 
-      exitTradeEvent(trade.user, _tradeId);
+      exitloanEvent(loan.user, _loanId);
     }
 
     /*
@@ -125,12 +125,12 @@ contract Seglos{
     */
 
     function getUserList() constant returns (uint[]) {
-      return listOfTrades[msg.sender];
+      return listOfLoans[msg.sender];
     }
 
-    function getTrade(uint tradeId) constant returns (uint lev, uint eth, uint time, uint exit) {
-      Trade trade = trades[tradeId];
-      return (trade.lev, trade.eth, trade.time, trade.exit );
+    function getLoan(uint loanId) constant returns (uint lev, uint eth, uint time, uint exit) {
+      Loan loan = Loans[loanId];
+      return (loan.lev, loan.eth, loan.time, loan.exit );
     }
 
     function getCurrentPrice() constant returns (uint currentPrice) {
